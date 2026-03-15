@@ -361,7 +361,8 @@ describe('PerformanceAggregator', () => {
       expect(result[0].model).toBe('gemini-2.0-flash');
       expect(result[0].errorRate).toBe(0.1);
       expect(result[0].avgLatencyMs).toBe(500);
-      expect(result[0].cacheHitRate).toBe(0.3);
+      // cacheHitRate = cached / prompt = 1500 / 4000
+      expect(result[0].cacheHitRate).toBe(0.375);
     });
 
     it('should handle zero requests gracefully', () => {
@@ -425,7 +426,8 @@ describe('PerformanceAggregator', () => {
       expect(result).toHaveLength(2);
 
       const modelA = result.find((m) => m.model === 'model-a')!;
-      expect(modelA.cacheHitRate).toBe(0.3);
+      // cacheHitRate = cached / prompt = 900 / 2000
+      expect(modelA.cacheHitRate).toBe(0.45);
 
       const modelB = result.find((m) => m.model === 'model-b')!;
       expect(modelB.errorRate).toBe(0.2);
@@ -469,7 +471,8 @@ describe('PerformanceAggregator', () => {
       expect(result.totalInput).toBe(5000);
       expect(result.totalOutput).toBe(3000);
       expect(result.totalCached).toBe(1500);
-      expect(result.cacheHitRate).toBe(0.3);
+      // cacheHitRate = totalCached / totalPrompt = 1500 / (2000+1500)
+      expect(result.cacheHitRate).toBeCloseTo(0.4286, 4);
     });
 
     it('should return zero cache hit rate when no input tokens', () => {

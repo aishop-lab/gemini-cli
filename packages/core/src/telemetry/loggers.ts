@@ -85,6 +85,7 @@ import { uiTelemetryService } from './uiTelemetry.js';
 import { ClearcutLogger } from './clearcut-logger/clearcut-logger.js';
 import { debugLogger } from '../utils/debugLogger.js';
 import type { BillingTelemetryEvent } from './billingEvents.js';
+import { performanceAggregator } from './performanceAggregator.js';
 
 export function logCliConfiguration(
   config: Config,
@@ -130,6 +131,10 @@ export function logToolCall(config: Config, event: ToolCallEvent): void {
     'event.timestamp': new Date().toISOString(),
   } as UiEvent;
   uiTelemetryService.addEvent(uiEvent);
+  performanceAggregator.recordToolLatency(
+    event.function_name,
+    event.duration_ms,
+  );
   ClearcutLogger.getInstance(config)?.logToolCallEvent(event);
   bufferTelemetryEvent(() => {
     const logger = logs.getLogger(SERVICE_NAME);

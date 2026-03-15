@@ -152,4 +152,32 @@ export {
 } from './metrics.js';
 export { runInDevTraceSpan, type SpanMetadata } from './trace.js';
 export { startupProfiler, StartupProfiler } from './startupProfiler.js';
+export {
+  PerformanceAggregator,
+  performanceAggregator,
+} from './performanceAggregator.js';
+export type {
+  PerformanceSnapshot,
+  StartupPhaseInfo,
+  MemoryStatus,
+  ToolPerformanceSummary,
+  ModelPerformanceSummary,
+} from './performanceAggregator.js';
+export { BaselineManager } from './baselineManager.js';
+export type {
+  RegressionThresholds,
+  MetricComparison,
+  ComparisonResult,
+} from './baselineManager.js';
+export { SuggestionEngine } from './suggestionEngine.js';
+export type { Suggestion, SuggestionRule } from './suggestionEngine.js';
+export {
+  formatSnapshotText,
+  formatSnapshotJSON,
+  formatSnapshotMarkdown,
+  formatComparisonText,
+  formatComparisonMarkdown,
+  formatSuggestionsText,
+} from './reportFormatter.js';
+export type { ReportFormat } from './reportFormatter.js';
 export * from './constants.js';

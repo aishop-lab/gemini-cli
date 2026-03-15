@@ -85,9 +85,26 @@ export interface PerformanceSnapshot {
 export class PerformanceAggregator {
   private toolLatencyBuffers: Map<string, number[]> = new Map();
   private readonly maxBufferSize: number;
+  private capturedStartupData: {
+    totalMs: number;
+    phases: StartupPhaseInfo[];
+  } | null = null;
 
   constructor(maxBufferSize: number = 1000) {
     this.maxBufferSize = maxBufferSize;
+  }
+
+  /**
+   * Captures and stores startup phase data from the performance API.
+   * Must be called before StartupProfiler.flush() clears the measures.
+   * Returns the captured data for immediate use.
+   */
+  captureStartup(phaseNames?: string[]): {
+    totalMs: number;
+    phases: StartupPhaseInfo[];
+  } {
+    this.capturedStartupData = this.getStartupBreakdown(phaseNames);
+    return this.capturedStartupData;
   }
 
   /**
@@ -193,6 +210,11 @@ export class PerformanceAggregator {
     for (const [model, metrics] of Object.entries(sessionMetrics.models)) {
       const totalReqs = metrics.api.totalRequests;
 
+      // tokens.prompt is total input sent (including cached portion).
+      // tokens.input is prompt - cached (billable only).
+      // Cache hit rate = cached / prompt, not cached / input.
+      const promptTokens = metrics.tokens.prompt;
+
       models.push({
         model,
         totalRequests: totalReqs,
@@ -203,9 +225,7 @@ export class PerformanceAggregator {
         outputTokens: metrics.tokens.candidates,
         cachedTokens: metrics.tokens.cached,
         cacheHitRate:
-          metrics.tokens.input > 0
-            ? metrics.tokens.cached / metrics.tokens.input
-            : 0,
+          promptTokens > 0 ? metrics.tokens.cached / promptTokens : 0,
       });
     }
 
@@ -224,18 +244,21 @@ export class PerformanceAggregator {
     let totalInput = 0;
     let totalOutput = 0;
     let totalCached = 0;
+    let totalPrompt = 0;
 
     for (const metrics of Object.values(sessionMetrics.models)) {
       totalInput += metrics.tokens.input;
       totalOutput += metrics.tokens.candidates;
       totalCached += metrics.tokens.cached;
+      totalPrompt += metrics.tokens.prompt;
     }
 
     return {
       totalInput,
       totalOutput,
       totalCached,
-      cacheHitRate: totalInput > 0 ? totalCached / totalInput : 0,
+      // Cache hit rate = cached / prompt (total input including cached).
+      cacheHitRate: totalPrompt > 0 ? totalCached / totalPrompt : 0,
     };
   }
 
@@ -256,7 +279,9 @@ export class PerformanceAggregator {
     return {
       timestamp: Date.now(),
       startup:
-        options?.startupData ?? this.getStartupBreakdown(options?.phaseNames),
+        options?.startupData ??
+        this.capturedStartupData ??
+        this.getStartupBreakdown(options?.phaseNames),
       memory: this.getMemoryStatus(),
       tools: this.getToolPerformance(sessionMetrics),
       models: this.getModelPerformance(sessionMetrics),
@@ -269,5 +294,12 @@ export class PerformanceAggregator {
    */
   reset(): void {
     this.toolLatencyBuffers.clear();
+    this.capturedStartupData = null;
   }
 }
+
+/**
+ * Shared singleton instance used by the telemetry wiring in loggers.ts
+ * and startup capture in gemini.tsx / AppContainer.tsx.
+ */
+export const performanceAggregator = new PerformanceAggregator();

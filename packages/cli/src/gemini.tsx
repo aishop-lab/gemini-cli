@@ -66,6 +66,7 @@ import {
   enableLineWrapping,
   shouldEnterAlternateScreen,
   startupProfiler,
+  performanceAggregator,
   ExitCodes,
   SessionStartSource,
   SessionEndReason,
@@ -730,6 +731,9 @@ export async function main() {
     }
 
     await config.initialize();
+    // Capture startup phase data before flush() clears performance marks.
+    // The aggregator stores this for later use by /perf.
+    performanceAggregator.captureStartup();
     startupProfiler.flush(config);
 
     // If not a TTY, read from stdin
